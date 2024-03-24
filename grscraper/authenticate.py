@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING
 
 from requests.adapters import HTTPAdapter, Retry
 from selenium.webdriver.common.by import By
@@ -9,12 +9,15 @@ from selenium.webdriver.common.by import By
 from .browser import get_cookies, load_browser
 
 if TYPE_CHECKING:
-    from config import Config
+    from pathlib import Path
+
     from requests import Session
     from selenium import webdriver
 
+    from config import Config
 
-def get_auth(filepath: str) -> dict:
+
+def get_auth(filepath: Path) -> dict:
     """Obtains login data from local csv file."""
     with open(filepath, "r") as file:
         text = file.read().strip()

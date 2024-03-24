@@ -1,6 +1,6 @@
 from grscraper import Config, Session, Shelf, sign_in
 
-config = Config("config.yaml")
+config = Config.from_file("config.yaml")
 
 with Session() as session:
     sign_in(config, session)
