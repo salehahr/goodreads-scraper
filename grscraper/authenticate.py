@@ -4,6 +4,7 @@ import re
 from typing import TYPE_CHECKING
 
 from requests.adapters import HTTPAdapter, Retry
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 
 from .browser import get_cookies, load_browser
@@ -46,7 +47,14 @@ def sign_in(config: Config, session: Session) -> None:
         element.send_keys(v)
     browser.find_element(By.ID, "signInSubmit").click()
 
-    shelf_link = browser.find_element(By.LINK_TEXT, "My Books").get_attribute("href")
+    try:
+        shelf_link = browser.find_element(By.LINK_TEXT, "My Books").get_attribute(
+            "href"
+        )
+    except NoSuchElementException as e:
+        print("CAPTCHA request.")
+        raise e
+
     config.user_id = int(re.search(f"\d+", shelf_link).group(0))
 
     session.cookies.update(get_cookies(browser))
