@@ -30,7 +30,7 @@ def sign_in(config: Config, session: Session) -> None:
     Logs in to Goodreads using Selenium.
     Initialises session and updates user id in config.
     """
-    browser = load_browser()
+    browser = load_browser(config)
     init_session(session, browser)
 
     # find login page

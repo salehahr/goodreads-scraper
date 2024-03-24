@@ -1,2 +1,3 @@
+chromedriver_path: "C:/projects/chromedriver.exe"
 login_filepath: ../goodreads_auth.csv
 shelf: to-read
