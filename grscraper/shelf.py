@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, List
 
 from .browser import get_soup
 
+from .book import Book
+
 if TYPE_CHECKING:
     from bs4 import BeautifulSoup
     from bs4.element import Tag
@@ -17,25 +19,6 @@ def clean_field_value(field_tag: Tag) -> str:
     field_value = field_tag.find("a").text.strip()
     field_value = field_value.split("\n")[0]
     return field_value
-
-
-class Book(object):
-    """Book object with title and author information."""
-
-    def __init__(self, title: str, author: str):
-        self._title: str = title
-        self._author: str = author
-
-    def __repr__(self) -> str:
-        return f"{self.lastname}: {self.short_title}"
-
-    @property
-    def short_title(self) -> str:
-        return self._title.split(":")[0]
-
-    @property
-    def lastname(self) -> str:
-        return self._author.split(",")[0]
 
 
 class Shelf(object):
