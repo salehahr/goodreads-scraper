@@ -3,31 +3,69 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, List
 
-from .browser import get_soup
+from bs4 import BeautifulSoup as Soup
 
 from .book import Book
 
 if TYPE_CHECKING:
-    from bs4 import BeautifulSoup
     from bs4.element import Tag
-    from config import Config
     from requests import Session
 
+    from config import Config
 
-def clean_field_value(field_tag: Tag) -> str:
+
+def field_value(field_tag: Tag) -> str:
     """Returns cleaned string value of field."""
-    field_value = field_tag.find("a").text.strip()
-    field_value = field_value.split("\n")[0]
-    return field_value
+    return field_tag.find("div").text.strip().split("\n")[0]
 
 
-class Shelf(object):
+class ShelfPage(Soup):
+    """
+    Represents the current webpage shown for the shelf.
+    """
+
+    def __init__(self, session: Session, base_url: str, page_num: int):
+        url = base_url if page_num == 1 else f"{base_url}&page={page_num}"
+        response = session.get(url)
+        super().__init__(response.content, "html.parser")
+
+        self.__session = session
+        self.__base_url = base_url
+        self.__page_num = page_num
+
+        self.titles = list(
+            map(field_value, self.find_all("td", {"class": "field title"}))
+        )
+        self.authors = list(
+            map(field_value, self.find_all("td", {"class": "field author"}))
+        )
+
+    @staticmethod
+    def from_session(session: Session, base_url: str, page_num: int = 1) -> ShelfPage:
+        """Generates response and soup of current page."""
+        return ShelfPage(session, base_url, page_num)
+
+    def next(self) -> ShelfPage:
+        """Returns the next ShelfPage."""
+        new_page_num = self.__page_num + 1
+        return ShelfPage.from_session(
+            self.__session, self.__base_url, page_num=new_page_num
+        )
+
+    @property
+    def total_books(self) -> int:
+        page_title = self.find("title").text
+        return int(re.search(r"(\d+) books", page_title).group(1))
+
+
+class Shelf:
     """Collection of Books."""
 
     def __init__(self, config: Config):
-        self._user_id: int = config.user_id
         self._name: str = config.shelf
-        self._url: str = f"https://www.goodreads.com/review/list/{self._user_id}?shelf={self._name}&per_page=100"
+        self._url: str = (
+            f"https://www.goodreads.com/review/list/{config.user_id}?shelf={self._name}&per_page=100"
+        )
 
         self._books: List[Book] = []
 
@@ -40,24 +78,13 @@ class Shelf(object):
 
     def populate(self, session: Session):
         """Populates the shelf with books."""
-        soup = get_soup(self._url, session)
-        num_books = int(re.search(f"(\d+) books", soup.find("title").text).group(1))
+        current_page = ShelfPage.from_session(session, self._url)
+        total_books = current_page.total_books
+        self._add(current_page.titles, current_page.authors)
 
-        page = 0
-        while len(self) < num_books:
-            page += 1
-            if page > 1:
-                soup = get_soup(self._next_url(page), session)
-
-            titles = [
-                clean_field_value(title)
-                for title in soup.find_all("td", {"class": "field title"})
-            ]
-            authors = [
-                clean_field_value(author)
-                for author in soup.find_all("td", {"class": "field author"})
-            ]
-            self._add(titles, authors)
+        while len(self) < total_books:
+            current_page = current_page.next()
+            self._add(current_page.titles, current_page.authors)
 
     def _add(self, *args) -> None:
         if len(args) == 1:
@@ -73,6 +100,3 @@ class Shelf(object):
 
     def _remove(self, book: Book) -> None:
         self._books.remove(book)
-
-    def _next_url(self, page) -> str:
-        return f"{self._url}&page={page}"
